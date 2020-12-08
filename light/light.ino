@@ -26,6 +26,14 @@ int stateMain = 0;
 const int nightTimeout = 1000 * 60 * 5; // 5 min
 unsigned long nightPreviousTime = 0; // For calculate timeout for night mode
 
+/* Lamp settings */
+int lampUp1 = LOW;
+int lampUp2 = LOW;
+int lampUp3 = LOW;
+int lampSwitchingOn = 0; // Progress switching on lamps 0 off, 1 - switching on in progress, 2 - switched on
+unsigned long lampPreviousTime = 0;
+const unsigned long lampDelayOnTime = 1 * 1000; // 2 sec
+const unsigned long lampStepTime = 400; // [ms] switch lamp one by one
 
 /* PWM LED settings */
 const int freq = 200; //Hz PWM frequency is in the range of 1 – 1000Khz.
@@ -52,7 +60,7 @@ int switchState = 0; // for detecting changes
 int switchPreviousState = 0; //  for logic
 int switchFlag = 0; // for logic - set to one only once
 unsigned long switchPreviousTime = 0;
-unsigned long switchTimeout = 1500; // changes are possible only once per 1500ms
+unsigned long switchTimeout = 200; // changes are possible only once per 1500ms (ok)
 
 
 /* Temperature sensor DS18B20 */
@@ -63,8 +71,8 @@ unsigned long switchTimeout = 1500; // changes are possible only once per 1500ms
 //DallasTemperature ds18(&oneWire);
 
 /* Put your WiFi SSID & Password */
-const char* WIFI_ssid = "www.lac.gda.pl";  // Enter SSID here
-const char* WIFI_password = "0585338376";  //Enter Password here
+const char* WIFI_ssid = "IoT";  // Enter SSID here
+const char* WIFI_password = "ZqFWBlZN6Vg5q52cLHPw";  //Enter Password here
 const char* WIFI_hostname = "lazienka";
 
 /* Server settings */
@@ -132,6 +140,7 @@ void loop() {
   ledHandle();
 
   // Process Main Lamps
+  lampLogic();
   lampHandle();
 
   // Process all sensor flags, set mainState
@@ -168,6 +177,8 @@ void handle_NotFound() {
 
 void handle_Off() {
   stateMain = 0;
+  ledValue = 0;
+  analogWrite(ledPIN, ledValue);
   server.send(200, "application/json", SendHTML());
 }
 
@@ -244,22 +255,63 @@ void ledLogic() {
 /**
    Handle switching on and off main lamps
 */
-void lampHandle() {
+void lampLogic() {
+
   if (stateMain == 0) { // Dark Mode
-    digitalWrite(lamp1PIN, LOW);
-    digitalWrite(lamp2PIN, LOW);
-    digitalWrite(lamp3PIN, LOW);
+    lampSwitchingOn = 0;
+    lampUp1 = LOW;
+    lampUp2 = LOW;
+    lampUp3 = LOW;
+    return;
   }
+
   if (stateMain == 1) {  // Night Mode - only LEDS
-    digitalWrite(lamp1PIN, LOW);
-    digitalWrite(lamp2PIN, LOW);
-    digitalWrite(lamp3PIN, LOW);
+    lampSwitchingOn = 0;
+    lampUp1 = LOW;
+    lampUp2 = LOW;
+    lampUp3 = LOW;
+    return;
   }
-  if (stateMain == 2) {  // Light mode - all lamps
-    digitalWrite(lamp1PIN, HIGH);
-    digitalWrite(lamp2PIN, HIGH);
-    digitalWrite(lamp3PIN, HIGH);
+
+  if (stateMain == 2) {  // Light mode - all lamps on one by one
+    if ( lampSwitchingOn == 2 ) { // Already on
+      return;
+    }
+    
+    if ( lampSwitchingOn == 0 ) {
+      lampSwitchingOn = 1;
+      lampPreviousTime = currentTime;
+      return;
+    }
+
+    // lampSwitchingOn == 1
+
+    // Take delay before switching on
+    if ( (currentTime - lampPreviousTime) <= lampDelayOnTime  ) {
+      return;
+    }
+
+    // After delay - switch on first lamp
+    lampUp1 = HIGH;
+
+    // After next small delay - switch on second lamp
+    if ( (currentTime - lampPreviousTime - lampDelayOnTime) >= lampStepTime  ) {
+      lampUp2 = HIGH;
+    }
+    
+    // After next small delay - switch on second lamp
+    if ( (currentTime - lampPreviousTime - lampDelayOnTime) >= ( 2 * lampStepTime ) ) {
+      lampUp3 = HIGH;
+      lampSwitchingOn = 2;
+    }
+
   }
+}
+
+void lampHandle() {
+  digitalWrite(lamp1PIN, lampUp1);
+  digitalWrite(lamp2PIN, lampUp2);
+  digitalWrite(lamp3PIN, lampUp3);
 }
 
 /**
