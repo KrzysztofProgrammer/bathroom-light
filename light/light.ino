@@ -73,7 +73,7 @@ unsigned long switchTimeout = 200; // changes are possible only once per 1500ms 
 /* Put your WiFi SSID & Password */
 const char* WIFI_ssid = "IoT";  // Enter SSID here
 const char* WIFI_password = "ZqFWBlZN6Vg5q52cLHPw";  //Enter Password here
-const char* WIFI_hostname = "lazienka";
+const char* WIFI_hostname = "bathroom";
 
 /* Server settings */
 ESP8266WebServer server(80);
@@ -203,8 +203,8 @@ void ledHandle() {
     ledValue++;
     analogWrite(ledPIN, ledValue);
     if ( ledValue >= pwmMax ) {
-      WebLog += " LED FULL ON ";
-      Serial.println("LED FULL ON");
+      WebLog += " LED-FULL-ON ";
+      Serial.println("LED-FULL-ON");
       Serial.println(ledValue);
     }
   }
@@ -218,7 +218,7 @@ void ledHandle() {
     ledValue--;
     analogWrite(ledPIN, ledValue);
     if ( ledValue == 0 ) {
-      WebLog += " LED FULL OFF ";
+      WebLog += " LED-FULL-OFF ";
       Serial.println("LED FULL OFF");
     }
   }
@@ -322,10 +322,10 @@ void pirHandle() {
   if ( pirState != newPirState ) {
     pirState = newPirState;
     if (pirState == HIGH) {
-      WebLog += " PIR ON ";
+      WebLog += " PIR-ON ";
       Serial.println("PIR ON");
     } else {
-      WebLog += " PIR OFF ";
+      WebLog += " PIR-OFF ";
       Serial.println("PIR OFF");
       pirPreviousState = LOW; // Reset previous state, trigger only up state
     }
@@ -344,11 +344,11 @@ void switchHandle() {
     switchState = newSwitchState;
     switchPreviousTime = currentTime;
     if (switchState == HIGH) {
-      WebLog += " SW ON ";
+      WebLog += " SW-ON ";
       Serial.println("Switch ON");
     } else {
       switchPreviousState = 0;  // Reset previous state, trigger only up state
-      WebLog += " SW OFF ";
+      WebLog += " SW-OFF ";
       Serial.println("Switch OFF");
     }
   }
@@ -404,7 +404,7 @@ void stateLogic() {
   // After timeout on night mode switch it off
   if (
     ( stateMain ==  1 ) && // night Mode
-    ( ( currentTime - nightPreviousTime ) >= nightPreviousTime ) // Timeout occured
+    ( ( currentTime - nightPreviousTime ) >= nightTimeout ) // Timeout occured
   ) {
     stateMain = 0;
   }
